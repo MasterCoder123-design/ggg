@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>3D Space Blaster</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+    }
+    canvas {
+      display: block;
+    }
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      font-family: monospace;
+      font-size: 24px;
+      z-index: 99;
+    }
+  </style>
+</head>
+<body>
+  <div id="score">SCORE: 0</div>
+  <canvas id="game"></canvas>
+  <script type="module">
+    import * as THREE from 'https://cdn.skypack.dev/three@0.150.1';
+
+    const canvas = document.querySelector('#game');
+    const renderer = new THREE.WebGLRenderer({ canvas });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 5);
+
+    const clock = new THREE.Clock();
+
+    // Lighting
+    const light = new THREE.PointLight(0xffffff, 1);
+    light.position.set(0, 0, 5);
+    scene.add(light);
+
+    // Player ship
+    const shipGeo = new THREE.ConeGeometry(0.3, 1, 32);
+    const shipMat = new THREE.MeshStandardMaterial({ color: '#00ffff' });
+    const ship = new THREE.Mesh(shipGeo, shipMat);
+    ship.rotation.x = Math.PI;
+    scene.add(ship);
+
+    // Asteroids
+    const asteroids = [];
+    const asteroidGeo = new THREE.DodecahedronGeometry(0.4);
+    const asteroidMat = new THREE.MeshStandardMaterial({ color: '#ff0055' });
+
+    for (let i = 0; i < 20; i++) {
+      const ast = new THREE.Mesh(asteroidGeo, asteroidMat);
+      resetAsteroid(ast);
+      scene.add(ast);
+      asteroids.push(ast);
+    }
+
+    function resetAsteroid(ast) {
+      ast.position.set((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 4, -Math.random() * 20 - 5);
+    }
+
+    // Stars
+    const stars = [];
+    const starGeo = new THREE.SphereGeometry(0.2, 16, 16);
+    const starMat = new THREE.MeshStandardMaterial({ color: '#ffff00', emissive: '#ffff00' });
+
+    for (let i = 0; i < 10; i++) {
+      const star = new THREE.Mesh(starGeo, starMat);
+      resetStar(star);
+      scene.add(star);
+      stars.push(star);
+    }
+
+    function resetStar(star) {
+      star.position.set((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 4, -Math.random() * 20 - 5);
+    }
+
+    // Controls
+    let left = false, right = false, up = false, down = false;
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft') left = true;
+      if (e.key === 'ArrowRight') right = true;
+      if (e.key === 'ArrowUp') up = true;
+      if (e.key === 'ArrowDown') down = true;
+    });
+    document.addEventListener('keyup', e => {
+      if (e.key === 'ArrowLeft') left = false;
+      if (e.key === 'ArrowRight') right = false;
+      if (e.key === 'ArrowUp') up = false;
+      if (e.key === 'ArrowDown') down = false;
+    });
+
+    // Score
+    let score = 0;
+    const scoreDiv = document.getElementById('score');
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+
+      // Move ship
+      if (left) ship.position.x -= delta * 3;
+      if (right) ship.position.x += delta * 3;
+      if (up) ship.position.y += delta * 3;
+      if (down) ship.position.y -= delta * 3;
+
+      // Move asteroids
+      for (const ast of asteroids) {
+        ast.position.z += delta * 5;
+        if (ast.position.z > 5) resetAsteroid(ast);
+        if (ast.position.distanceTo(ship.position) < 0.5) {
+          scoreDiv.innerText = "💀 GAME OVER 💀";
+          return;
+        }
+      }
+
+      // Move stars
+      for (const star of stars) {
+        star.position.z += delta * 5;
+        if (star.position.z > 5) resetStar(star);
+        if (star.position.distanceTo(ship.position) < 0.5) {
+          score += 10;
+          resetStar(star);
+        }
+      }
+
+      scoreDiv.innerText = `SCORE: ${score}`;
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
